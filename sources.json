@@ -1,0 +1,14 @@
+{
+  "greenhouse": {
+    "Airbnb": "airbnb", "Anthropic": "anthropic", "Cloudflare": "cloudflare",
+    "Databricks": "databricks", "Dataiku": "dataiku", "Datadog": "datadog",
+    "Discord": "discord", "DoorDash": "doordashusa", "Dropbox": "dropbox",
+    "Figma": "figma", "GitLab": "gitlab", "Grafana Labs": "grafanalabs",
+    "Hudson River Trading": "hudsonrivertrading", "Lyft": "lyft", "MongoDB": "mongodb",
+    "Reddit": "reddit", "Roblox": "roblox", "Scale AI": "scaleai",
+    "Stripe": "stripe", "Twitch": "twitch", "Two Sigma": "twosigma",
+    "Verkada": "verkada", "Waymo": "waymo"
+  },
+  "lever": {"Palantir": "palantir", "Shield AI": "shieldai"},
+  "ashby": {"OpenAI": "openai", "Ramp": "ramp", "Notion": "notion", "Vercel": "vercel"}
+}
