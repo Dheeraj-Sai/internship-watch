@@ -3,6 +3,8 @@
 const $ = (selector) => document.querySelector(selector);
 const stages = ["Saved", "Applied", "Assessment", "Interview", "Offer", "Rejected", "Withdrawn"];
 const statuses = ["Explicitly supported", "Restricted", "Unclear"];
+const discoveryFile = fetch("data/discovery.json").then((response) => response.ok ? response.json() : null).catch(() => null);
+const day = 86400000;
 const storageKey = "internship-watch-v1";
 const dateFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
@@ -130,14 +132,16 @@ function jobCard(job) {
   const actions = element("div", "", "actions");
   const saved = state.applications.some((item) => item.id === job.id);
   actions.append(button(saved ? "View saved" : "Save", () => saved ? switchView("tracker") : saveJob(job)),
-    link("Apply", job.url, "primary"));
+    link(job.provider === "direct" ? "Check employer" : "Apply", job.url, "primary"));
   head.append(title, actions);
   const tags = element("div", "", "tags");
   const labels = [job.kind, job.kind !== "Full-time" ? job.term === "Unclear" ? "Term unclear" : job.term : "", ...job.tracks,
     job.phd_only ? "PhD listed in title" : job.degree ? "Graduate degree mentioned" : "",
     job.cpt.status === "Unclear" ? "" : `CPT: ${job.cpt.status}`,
     job.sponsorship.status === "Unclear" ? "" : `Sponsorship: ${job.sponsorship.status}`,
-    job.status === "Closed" ? "Closed" : ""];
+    job.status === "Closed" ? "Closed" : "",
+    job.provider === "direct" ? "Manually reviewed" : "",
+    ...((job.discovered || []).map((source) => `Found on ${source.label}`))];
   for (const label of labels.filter(Boolean)) tags.append(element("span", label, "tag"));
   const timing = element("p", [
     job.posted_at ? `Posted ${ago(job.posted_at)}` : "Posted date unavailable",
@@ -153,7 +157,17 @@ function jobCard(job) {
   addLine(details, "Deadline language", job.deadline);
   addLine(details, "Pay", job.pay);
   addLine(details, "Workplace", job.workplace);
-  addLine(details, "Last verified", `${date(job.last_seen_at)} via ${job.provider}`);
+  addLine(details, job.provider === "direct" ? "Manually reviewed" : "Last verified",
+    job.provider === "direct" ? date(job.last_seen_at) : `${date(job.last_seen_at)} via ${job.provider}`);
+  if (job.discovered?.length) {
+    const references = element("p");
+    references.append(document.createTextNode("Discovered on · "));
+    job.discovered.forEach((source, index) => {
+      if (index) references.append(document.createTextNode(" / "));
+      references.append(link(source.label, source.url));
+    });
+    details.append(references);
+  }
   details.append(watchButton(job.company));
   card.append(head, tags, timing, details);
   return card;
@@ -188,6 +202,7 @@ function renderFeed() {
     if (chosen("track") && !job.tracks.includes(chosen("track"))) return false;
     if (chosen("company") && chosen("company") !== job.company) return false;
     if (chosen("provider") && chosen("provider") !== job.provider) return false;
+    if (chosen("discovery") && !job.discovered?.some((source) => source.label === chosen("discovery"))) return false;
     if (chosen("workplace") && chosen("workplace").toLowerCase() !== job.workplace.toLowerCase().replace("on site", "on-site")) return false;
     if (chosen("degree") === "masters" && (!job.degree || job.phd_only)) return false;
     if (chosen("degree") === "graduation" && !job.graduation) return false;
@@ -323,10 +338,31 @@ async function refresh() {
     const incoming = await response.json();
     if (!Array.isArray(incoming.jobs) || !incoming.sources) throw new Error("Invalid feed");
     const changed = snapshot.checked_at !== incoming.checked_at;
+    const discovery = await discoveryFile;
+    if (discovery) {
+      for (const job of incoming.jobs) {
+        const pathname = new URL(job.url).pathname;
+        const references = discovery.matches.find((entry) =>
+          entry.company === job.company && pathname.split("/").includes(entry.postingId));
+        if (references) job.discovered = references.sources;
+      }
+      const unknown = { status: "Unclear", quote: "" };
+      for (const entry of discovery.direct) {
+        if (Date.now() - Date.parse(entry.reviewed) >= 30 * day) continue;
+        incoming.jobs.push({
+          ...entry, kind: "Internship", term: "Summer 2027", tracks: ["Software engineering"],
+          us: true, status: "Open", provider: "direct", baseline: true,
+          posted_at: null, first_seen_at: entry.reviewed, last_seen_at: entry.reviewed,
+          cpt: unknown, sponsorship: entry.sponsorship || unknown,
+        });
+      }
+    }
     snapshot = incoming;
     if (changed) {
       setOptions($("#filters [name=track]"), "All families", [...new Set(snapshot.jobs.flatMap((job) => job.tracks))].sort());
-      setOptions($("#filters [name=company]"), "All companies", Object.keys(snapshot.sources).sort());
+      setOptions($("#filters [name=company]"), "All companies", [...new Set([...Object.keys(snapshot.sources), ...snapshot.jobs.map((job) => job.company)])].sort());
+      setOptions($("#filters [name=discovery]"), "Any discovery source",
+        [...new Set(snapshot.jobs.flatMap((job) => (job.discovered || []).map((source) => source.label)))].sort());
     }
     loadError = false;
     renderFreshness();

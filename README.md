@@ -33,3 +33,7 @@ Edit `sources.json` to add or adjust a company’s verified Greenhouse, Lever or
 - CPT acceptance and sponsorship labels come from explicit phrases. Open the employer listing for full context. An unclear value means the collector could not determine a policy.
 - Listings are closed after consecutive successful checks miss them. Individual source failures retain the previous results and show up in **Sources**.
 - Application statuses, notes and watchlist selections are local to the browser. Export a JSON backup from **Applications** before clearing site data or switching devices.
+
+## Add openings found on other job boards
+
+Use `site/data/discovery.json` to attach discovery links to a specific employer-feed posting or add a manually reviewed direct employer listing. Job board links appear under the posting details and in the **Discovered on** filter. Manually reviewed links show **Check employer** and expire from the feed after 30 days unless reviewed again. The scheduled workflow checks employer feeds. Use board alerts, including HireAggies, for listings that require your sign-in and save them privately under **Applications**.

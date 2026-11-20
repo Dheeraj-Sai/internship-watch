@@ -1,0 +1,116 @@
+{
+  "matches": [
+    {
+      "company": "Amplify",
+      "postingId": "855d22a3-f15e-49f6-854c-29e505653efa",
+      "sources": [
+        {
+          "label": "Built In",
+          "url": "https://builtin.com/job/summer-2027-software-engineering-intern/11756601"
+        }
+      ]
+    },
+    {
+      "company": "Decagon",
+      "postingId": "16529089-a048-4bc3-8456-3f197135e00b",
+      "sources": [
+        {
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/jobs/software-engineer-intern-jobs"
+        }
+      ]
+    },
+    {
+      "company": "Courier Health",
+      "postingId": "5258913007",
+      "sources": [
+        {
+          "label": "Wellfound",
+          "url": "https://wellfound.com/jobs/4811942-software-engineering-intern-summer-2027"
+        }
+      ]
+    },
+    {
+      "company": "Sigma Computing",
+      "postingId": "7850795003",
+      "sources": [
+        {
+          "label": "Simplify",
+          "url": "https://simplify.jobs/p/b29f7462-630f-4a75-8dca-924bcd83bd11/Software-Engineer-Intern"
+        }
+      ]
+    }
+  ],
+  "direct": [
+    {
+      "id": "Intuit:23805",
+      "company": "Intuit",
+      "title": "Summer 2027: Software Engineering Intern - Full Stack",
+      "url": "https://jobs.intuit.com/en/job/mountain-view/summer-2027-software-engineering-intern-full-stack/27595/100620927520",
+      "locations": [
+        "Mountain View, CA",
+        "Atlanta, GA",
+        "Charlotte, NC",
+        "New York, NY",
+        "San Diego, CA"
+      ],
+      "workplace": "Hybrid",
+      "degree": "Master's accepted",
+      "graduation": "Expected graduation after the internship ends.",
+      "pay": "$35.50–$79.42/hr",
+      "reviewed": "2026-11-20T12:00:00-06:00",
+      "discovered": [
+        {
+          "label": "Indeed",
+          "url": "https://www.indeed.com/viewjob?jk=3066f06cc0e8e042"
+        },
+        {
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/jobs/view/summer-2027-software-engineering-intern-full-stack-at-intuit-4467798523"
+        }
+      ]
+    },
+    {
+      "id": "PTC:JR112943",
+      "company": "PTC",
+      "title": "Onshape Software Engineer Intern (Summer 2027)",
+      "url": "https://ptc.wd1.myworkdayjobs.com/ptc/job/Boston-MA-USA/Software-Engineer-Intern--Summer-2027-_JR112943",
+      "locations": [
+        "Boston, MA"
+      ],
+      "workplace": "On-site",
+      "pay": "$32–$36/hr",
+      "sponsorship": {
+        "status": "Restricted",
+        "quote": "This position is not eligible for employment-based immigration sponsorship."
+      },
+      "reviewed": "2026-11-20T12:00:00-06:00",
+      "discovered": [
+        {
+          "label": "Handshake",
+          "url": "https://app.joinhandshake.com/public/jobs/11812007"
+        }
+      ]
+    },
+    {
+      "id": "Pinterest:7838577",
+      "company": "Pinterest",
+      "title": "Software Engineer Intern 2027 (USA)",
+      "url": "https://www.pinterestcareers.com/jobs/7838577/software-engineer-intern-2027-usa/",
+      "locations": [
+        "San Francisco, CA",
+        "Remote (United States)"
+      ],
+      "workplace": "Unclear",
+      "degree": "Bachelor’s or Master’s in CS or related field",
+      "graduation": "On track to graduate by June 2029.",
+      "reviewed": "2026-11-20T12:00:00-06:00",
+      "discovered": [
+        {
+          "label": "Simplify",
+          "url": "https://simplify.jobs/p/4fda6f3c-c073-469a-90b9-cb1d79c5f369/Software-Engineer-Intern"
+        }
+      ]
+    }
+  ]
+}
