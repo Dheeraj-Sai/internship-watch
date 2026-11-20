@@ -403,9 +403,15 @@ async function refresh() {
       const unknown = { status: "Unclear", quote: "" };
       for (const entry of discovery.direct) {
         if (Date.now() - Date.parse(entry.reviewed) >= 30 * day) continue;
-        const pathname = new URL(entry.url).pathname;
-        const existing = incoming.jobs.find((job) => job.company === entry.company &&
-          new URL(job.url).pathname.replace(/\/$/, "") === pathname.replace(/\/$/, ""));
+        const directUrl = new URL(entry.url);
+        const employerJobId = directUrl.pathname.match(/\/jobs\/(\d+)(?:\/|$)/)?.[1];
+        const existing = incoming.jobs.find((job) => {
+          if (job.company !== entry.company || job.status !== "Open") return false;
+          const feedUrl = new URL(job.url);
+          return (feedUrl.hostname.replace(/^www\./, "") === directUrl.hostname.replace(/^www\./, "") &&
+            (feedUrl.pathname.replace(/\/$/, "") === directUrl.pathname.replace(/\/$/, "") ||
+              (employerJobId && feedUrl.searchParams.get("gh_jid") === employerJobId)));
+        });
         if (existing) {
           existing.discovered = entry.discovered;
           if (existing.term === "Unclear") existing.term = "Summer 2027";

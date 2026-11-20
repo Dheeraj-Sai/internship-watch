@@ -2,6 +2,7 @@
 import argparse
 import datetime as dt
 import json
+import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -16,7 +17,10 @@ def posting_key(raw):
         return "greenhouse", path.rsplit("/", 1)[1]
     if url.hostname in ("jobs.ashbyhq.com", "jobs.lever.co"):
         path = path.removesuffix("/application").removesuffix("/apply")
-    return url.hostname, path
+    employer_id = re.match(r"/jobs/(\d+)(?:/|$)", path)
+    if employer_id and url.hostname in ("www.pinterestcareers.com", "pinterestcareers.com"):
+        return "greenhouse", employer_id[1]
+    return (url.hostname or "").removeprefix("www."), path
 
 
 def main():
