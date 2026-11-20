@@ -37,3 +37,22 @@ Edit `sources.json` to add or adjust a company’s verified Greenhouse, Lever or
 ## Add openings found on other job boards
 
 Use `site/data/discovery.json` to attach discovery links to a specific employer-feed posting or add a manually reviewed direct employer listing. Job board links appear under the posting details and in the **Discovered on** filter. Manually reviewed links show **Check employer** and expire from the feed after 30 days unless reviewed again. The scheduled workflow checks employer feeds. Use board alerts, including HireAggies, for listings that require your sign-in and save them privately under **Applications**.
+
+## Nationwide coverage
+
+- **My CS fit** shows tracked technical roles and your private inbox. Switch **Coverage** to **All role families** for the broader national inventory. The Summer tab includes explicitly dated roles and, by default, openings with an unclear term.
+- `sources.json` contains priority employers, checked on each scheduled run. **Expanded employers** in `expanded-sources.json` are rotated in batches of up to 40. A healthy expanded board becomes eligible after two hours. An errored board is retried after 24 hours. Actual intervals depend on backlog and workflow availability.
+- Under **Applications → Private discovery inbox**, enter the employer, role, URL, source, term, and location. Saved inbox links appear in your browser's feed and export. This is the path for HireAggies and platform-only openings.
+- Compare the feed with a fresh, manually checked sample of openings using `python3 -B coverage.py /path/to/sample.json`. Provide a JSON array of records with `source` and `employer_url` fields. It reports hits per source and prints missing links. Use official live application URLs and sample different industries and platforms. The result describes only the supplied sample.
+
+### Optional GitHub Actions secrets
+
+In **Settings → Secrets and variables → Actions**, create repository secrets for the providers you want to activate. Then run **Refresh internship dashboard**. Keys belong in repository secrets.
+
+| Integration | Repository secrets | Scheduled behavior |
+| --- | --- | --- |
+| [Adzuna U.S. search](https://developer.adzuna.com/docs/terms_of_service) | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Bounded evaluation queries for internships and co-ops every six hours. Listings are attributed and link through Adzuna. Review your account quota and display terms before activating. |
+| [USAJOBS student search](https://developer.usajobs.gov/apirequest/) | `USAJOBS_API_KEY`, `USAJOBS_USER_AGENT` (email used for the key request) | Up to 100 matching announcements per hourly check. Review citizenship and eligibility on each official announcement. |
+| [Brave Search](https://api-dashboard.search.brave.com/app/documentation/web-search) | `BRAVE_SEARCH_API_KEY` | One query every six hours for new public employer boards. Use an account plan that permits retaining discovered board identifiers. Search results are used to identify board URLs; employers are checked through supported feeds. |
+
+The **Sources** tab shows integrations awaiting credentials, completed source checks, and failures. Use `python3 -B collect.py --scheduled --output /tmp/internships.json` to test a scheduled batch without overwriting your local feed. A plain `python3 -B collect.py` checks the full registry locally.

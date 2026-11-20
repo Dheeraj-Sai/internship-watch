@@ -82,3 +82,5 @@ footer { padding-block: 2rem; font-size: .9rem; }
   .filters .split { grid-column: 1 / -1; }
   .manual, .record { grid-template-columns: 1fr; }
 }
+
+.provider-credit { display: inline-grid; place-items: center; min-width: 116px; min-height: 23px; }

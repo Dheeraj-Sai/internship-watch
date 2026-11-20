@@ -2,6 +2,9 @@
 
 const $ = (selector) => document.querySelector(selector);
 const stages = ["Saved", "Applied", "Assessment", "Interview", "Offer", "Rejected", "Withdrawn"];
+const privateKinds = ["Internship", "Co-op", "Full-time"];
+const privateTerms = ["Unclear", "Summer 2027", "Other term"];
+const privateSources = ["Other", "LinkedIn", "Indeed", "Handshake", "HireAggies", "Built In", "Wellfound", "Simplify"];
 const statuses = ["Explicitly supported", "Restricted", "Unclear"];
 const discoveryFile = fetch("data/discovery.json").then((response) => response.ok ? response.json() : null).catch(() => null);
 const day = 86400000;
@@ -102,10 +105,18 @@ function watchButton(company) {
 }
 
 function saveJob(job) {
-  if (state.applications.some((item) => item.id === job.id)) return;
+  const existing = state.applications.find((item) => item.id === job.id);
+  if (existing) {
+    if (job.privateListing) {
+      existing.privateListing = job.privateListing;
+      persist();
+      render();
+    }
+    return;
+  }
   state.applications.unshift({
     id: job.id, title: job.title, company: job.company, url: job.url,
-    stage: "Saved", notes: "", applied: "", followUp: "",
+    stage: "Saved", notes: "", applied: "", followUp: "", privateListing: job.privateListing,
   });
   persist();
   render();
@@ -132,7 +143,7 @@ function jobCard(job) {
   const actions = element("div", "", "actions");
   const saved = state.applications.some((item) => item.id === job.id);
   actions.append(button(saved ? "View saved" : "Save", () => saved ? switchView("tracker") : saveJob(job)),
-    link(job.provider === "direct" ? "Check employer" : "Apply", job.url, "primary"));
+    link(job.provider === "direct" ? "Check employer" : job.provider === "private" ? "Open saved link" : "Apply", job.url, "primary"));
   head.append(title, actions);
   const tags = element("div", "", "tags");
   const labels = [job.kind, job.kind !== "Full-time" ? job.term === "Unclear" ? "Term unclear" : job.term : "", ...job.tracks,
@@ -140,7 +151,7 @@ function jobCard(job) {
     job.cpt.status === "Unclear" ? "" : `CPT: ${job.cpt.status}`,
     job.sponsorship.status === "Unclear" ? "" : `Sponsorship: ${job.sponsorship.status}`,
     job.status === "Closed" ? "Closed" : "",
-    job.provider === "direct" ? "Manually reviewed" : "",
+    job.provider === "direct" ? "Manually reviewed" : job.provider === "private" ? "Private inbox" : "",
     ...((job.discovered || []).map((source) => `Found on ${source.label}`))];
   for (const label of labels.filter(Boolean)) tags.append(element("span", label, "tag"));
   const timing = element("p", [
@@ -157,8 +168,10 @@ function jobCard(job) {
   addLine(details, "Deadline language", job.deadline);
   addLine(details, "Pay", job.pay);
   addLine(details, "Workplace", job.workplace);
-  addLine(details, job.provider === "direct" ? "Manually reviewed" : "Last verified",
-    job.provider === "direct" ? date(job.last_seen_at) : `${date(job.last_seen_at)} via ${job.provider}`);
+  if (job.provider !== "private") {
+    addLine(details, job.provider === "direct" ? "Manually reviewed" : "Last verified",
+      job.provider === "direct" ? date(job.last_seen_at) : `${date(job.last_seen_at)} via ${job.provider}`);
+  }
   if (job.discovered?.length) {
     const references = element("p");
     references.append(document.createTextNode("Discovered on · "));
@@ -169,7 +182,9 @@ function jobCard(job) {
     details.append(references);
   }
   details.append(watchButton(job.company));
-  card.append(head, tags, timing, details);
+  card.append(head, tags, timing);
+  if (job.provider === "adzuna") card.append(link("Adzuna", "https://www.adzuna.com/", "provider-credit"));
+  card.append(details);
   return card;
 }
 
@@ -179,13 +194,31 @@ function fit(job) {
     - Number(job.cpt.status === "Restricted") * 3 - Number(job.phd_only) * 4;
 }
 
+function visibleJobs() {
+  const publicUrls = new Set(snapshot.jobs.map((job) => job.url));
+  const unknown = { status: "Unclear", quote: "" };
+  const inbox = state.applications.filter((item) => item.privateListing && !publicUrls.has(item.url));
+  return [...snapshot.jobs, ...inbox.map((item) => ({
+    id: item.id, title: item.title, company: item.company, url: item.url,
+    kind: item.privateListing.kind, term: item.privateListing.term, us: item.privateListing.us,
+    provider: "private", locations: [], workplace: "Unclear", tracks: [], status: "Open",
+    cpt: unknown, sponsorship: unknown, first_seen_at: item.privateListing.added,
+    discovered: [{ label: item.privateListing.source, url: item.url }],
+  }))];
+}
+
 function renderFeed() {
   const form = $("#filters");
+  const jobs = visibleJobs();
+  setOptions(form.elements.company, "All companies", [...new Set(jobs.map((job) => job.company))].sort());
+  setOptions(form.elements.discovery, "Any discovery source",
+    [...new Set(jobs.flatMap((job) => (job.discovered || []).map((source) => source.label)))].sort());
   const filters = new FormData(form);
   const chosen = (name) => filters.get(name) || "";
   const basis = chosen("basis");
   const recent = (job) => Math.max(Date.parse(job.first_seen_at) || 0, Date.parse(job.reopened_at) || 0);
-  const rows = snapshot.jobs.filter((job) => {
+  const rows = jobs.filter((job) => {
+    if (chosen("scope") === "fit" && !job.tracks.length && job.provider !== "private") return false;
     if (!chosen("closed") && job.status === "Closed") return false;
     if (!chosen("nonus") && !job.us) return false;
     if (tab === "summer" && (job.kind !== "Internship" ||
@@ -275,11 +308,25 @@ function renderTracker() {
 }
 
 function renderCoverage() {
-  const cards = Object.entries(snapshot.sources).sort(([a], [b]) => a.localeCompare(b)).map(([company, health]) => {
+  const coverage = snapshot.coverage;
+  $("#coverage-summary").textContent = coverage
+    ? `${coverage.employer_successes} of ${coverage.configured} employer boards have returned data. ${snapshot.jobs.filter((job) => job.us && job.status === "Open" && job.kind === "Internship").length} U.S. internships in the feed.`
+    : "Employer coverage will appear after the next refresh.";
+  const integrations = Object.entries(coverage?.national || {}).map(([name, metadata]) => {
+    const source = snapshot.sources[name];
+    return element("li", metadata.enabled
+      ? `${name} · Last success ${date(source?.succeeded_at)}${source?.error ? ` · ${source.error}` : ""}`
+      : `${name} · Awaiting API credentials`);
+  });
+  if (coverage) integrations.push(element("li", coverage.discovery_enabled
+    ? `Employer discovery · Last check ${date(snapshot.registry_discovery?.checked_at)}${snapshot.registry_discovery?.error ? ` · ${snapshot.registry_discovery.error}` : ""}`
+    : "Automatic employer discovery · Awaiting search API credentials"));
+  $("#national-status").replaceChildren(...integrations);
+  const cards = Object.entries(snapshot.sources).filter(([name]) => !coverage?.national?.[name]).sort(([a], [b]) => a.localeCompare(b)).map(([company, health]) => {
     const card = element("article", "", "source-row");
-    const old = !health.succeeded_at || Date.now() - Date.parse(health.succeeded_at) > 25 * 60000;
+    const old = health.succeeded_at && Date.now() - Date.parse(health.succeeded_at) > 180 * 60000;
     card.append(element("h3", company), element("p",
-      health.error ? `Check failed · ${health.error}` : old ? "Delayed" : `Healthy · ${health.matching} matching`, "meta"),
+      health.error ? `Check failed · ${health.error}` : !health.succeeded_at ? "Awaiting first check" : old ? "Delayed" : `Healthy · ${health.matching} matching`, "meta"),
     element("p", `Last success · ${date(health.succeeded_at)}`, "meta"), watchButton(company));
     return card;
   });
@@ -325,10 +372,17 @@ function validateBackup(data) {
     const validDate = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
     clean.push({ id: item.id, url: url(item.url), title: item.title.slice(0, 200), company: item.company.slice(0, 100),
       stage: item.stage, notes: typeof item.notes === "string" ? item.notes.slice(0, 4000) : "",
-      applied: validDate(item.applied), followUp: validDate(item.followUp) });
+      applied: validDate(item.applied), followUp: validDate(item.followUp),
+      privateListing: validatePrivateListing(item.privateListing) });
   }
   return { applications: clean, watch: [...new Set(data.watch.filter((name) => typeof name === "string"))],
     reviewed: Number.isFinite(Date.parse(data.reviewed)) ? data.reviewed : null };
+}
+
+function validatePrivateListing(item) {
+  if (!item || !privateKinds.includes(item.kind) || !privateTerms.includes(item.term)
+    || !privateSources.includes(item.source) || !Number.isFinite(Date.parse(item.added))) return undefined;
+  return { kind: item.kind, term: item.term, source: item.source, added: item.added, us: item.us === true };
 }
 
 async function refresh() {
@@ -349,6 +403,14 @@ async function refresh() {
       const unknown = { status: "Unclear", quote: "" };
       for (const entry of discovery.direct) {
         if (Date.now() - Date.parse(entry.reviewed) >= 30 * day) continue;
+        const pathname = new URL(entry.url).pathname;
+        const existing = incoming.jobs.find((job) => job.company === entry.company &&
+          new URL(job.url).pathname.replace(/\/$/, "") === pathname.replace(/\/$/, ""));
+        if (existing) {
+          existing.discovered = entry.discovered;
+          if (existing.term === "Unclear") existing.term = "Summer 2027";
+          continue;
+        }
         incoming.jobs.push({
           ...entry, kind: "Internship", term: "Summer 2027", tracks: ["Software engineering"],
           us: true, status: "Open", provider: "direct", baseline: true,
@@ -360,9 +422,7 @@ async function refresh() {
     snapshot = incoming;
     if (changed) {
       setOptions($("#filters [name=track]"), "All families", [...new Set(snapshot.jobs.flatMap((job) => job.tracks))].sort());
-      setOptions($("#filters [name=company]"), "All companies", [...new Set([...Object.keys(snapshot.sources), ...snapshot.jobs.map((job) => job.company)])].sort());
-      setOptions($("#filters [name=discovery]"), "Any discovery source",
-        [...new Set(snapshot.jobs.flatMap((job) => (job.discovered || []).map((source) => source.label)))].sort());
+
     }
     loadError = false;
     renderFreshness();
@@ -407,7 +467,9 @@ $("#manual").addEventListener("submit", (event) => {
     $("#tracker-status").textContent = "Enter a role, company, and valid HTTPS job link.";
     return;
   }
-  saveJob({ id: `private:${address}`, title, company, url: address });
+  const privateListing = validatePrivateListing({ kind: input.get("kind"), term: input.get("term"),
+    source: input.get("discovery"), added: new Date().toISOString(), us: input.get("country") === "us" });
+  saveJob({ id: `private:${address}`, title, company, url: address, privateListing });
   form.reset();
 });
 $("#export").addEventListener("click", () => {
